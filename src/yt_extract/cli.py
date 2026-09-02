@@ -1,8 +1,8 @@
 """The command line.
 
-    keel-youtube run <url> --out ./out      the whole thing
-    keel-youtube plan <url> --out ./out     stop after the transcript
-    keel-youtube doctor                     what is installed, what is missing
+    yt-extract run <url> --out ./out      the whole thing
+    yt-extract plan <url> --out ./out     stop after the transcript
+    yt-extract doctor                     what is installed, what is missing
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import __version__, llm
 from .binaries import ffmpeg_path, ffprobe_path, ytdlp_path
-from .errors import KeelYoutubeError
+from .errors import ExtractError
 from .pipeline import run as run_pipeline
 
 
@@ -37,14 +37,14 @@ def _add_run_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def _doctor() -> int:
-    print(f"keel-youtube {__version__}\n")
+    print(f"yt-extract {__version__}\n")
     ok = True
 
     print("external programs")
     for label, resolver in (("yt-dlp", ytdlp_path), ("ffmpeg", ffmpeg_path)):
         try:
             print(f"  [ok]   {label:8} {resolver()}")
-        except KeelYoutubeError as exc:
+        except ExtractError as exc:
             ok = False
             print(f"  [MISS] {label:8} {exc}")
     probe = ffprobe_path()
@@ -64,11 +64,11 @@ def _doctor() -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="keel-youtube",
+        prog="yt-extract",
         description="Turn a YouTube video into a folder: a formatted transcript plus the "
                     "screenshots that matter.",
     )
-    parser.add_argument("--version", action="version", version=f"keel-youtube {__version__}")
+    parser.add_argument("--version", action="version", version=f"yt-extract {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
 
     _add_run_arguments(sub.add_parser("run", help="Transcript and screenshots for each URL."))
@@ -98,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
                 plan_only=args.command == "plan",
                 log=lambda message: print(message, flush=True),
             )
-        except KeelYoutubeError as exc:
+        except ExtractError as exc:
             failures += 1
             print(f"error: {url}: {exc}", file=sys.stderr)
         except KeyboardInterrupt:

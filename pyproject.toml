@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "keel-youtube"
+name = "yt-extract"
 version = "0.1.0"
 description = "Turn a YouTube video into a folder: a formatted transcript plus the screenshots that matter."
 readme = "README.md"
@@ -13,7 +13,7 @@ license = { text = "UNLICENSED" }
 keywords = ["youtube", "transcript", "screenshots", "ffmpeg", "yt-dlp"]
 
 # The two external programs this tool drives are both installable by pip, so a
-# plain `pip install keel-youtube` leaves nothing for the user to set up:
+# plain `pip install yt-extract` leaves nothing for the user to set up:
 #   yt-dlp         - a pure-Python package; also the thing that breaks when
 #                    YouTube changes, so it is deliberately NOT pinned tight.
 #   imageio-ffmpeg - ships a prebuilt ffmpeg binary per platform. A system
@@ -29,10 +29,11 @@ dependencies = [
 anthropic = ["anthropic>=0.40"]
 
 [project.scripts]
-keel-youtube = "keel_youtube.cli:main"
+yt-extract = "yt_extract.cli:main"
+ytx = "yt_extract.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/miladsafaei-me/keel-youtube"
+Homepage = "https://github.com/miladsafaei-me/yt-extract"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/keel_youtube"]
+packages = ["src/yt_extract"]

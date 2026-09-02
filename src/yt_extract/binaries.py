@@ -3,7 +3,7 @@
 Both are pip-installable, so the normal case needs no manual setup at all. Each
 resolver still checks a system install first: a distribution's own ffmpeg is
 usually newer and better optimized than the bundled one, and a user who set
-KEEL_YOUTUBE_FFMPEG meant it.
+YT_EXTRACT_FFMPEG meant it.
 """
 
 from __future__ import annotations
@@ -32,14 +32,14 @@ def _platform_hint() -> str:
 def ffmpeg_path() -> str:
     """Absolute path to an ffmpeg binary.
 
-    Order: an explicit KEEL_YOUTUBE_FFMPEG override, then a system ffmpeg on
+    Order: an explicit YT_EXTRACT_FFMPEG override, then a system ffmpeg on
     PATH, then the copy bundled by the imageio-ffmpeg dependency.
     """
-    override = (os.environ.get("KEEL_YOUTUBE_FFMPEG") or "").strip()
+    override = (os.environ.get("YT_EXTRACT_FFMPEG") or "").strip()
     if override:
         if not os.path.isfile(override):
             raise MissingRequirement(
-                f"KEEL_YOUTUBE_FFMPEG points at {override!r}, which is not a file."
+                f"YT_EXTRACT_FFMPEG points at {override!r}, which is not a file."
             )
         return override
 

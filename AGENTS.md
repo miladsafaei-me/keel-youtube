@@ -1,4 +1,4 @@
-# Working on keel-youtube
+# Working on yt-extract
 
 Read this before changing anything. It is written for whatever agent or editor is
 driving — Claude Code, Cursor, Copilot, Codex, a human.
@@ -68,7 +68,7 @@ change belongs in the caller, not here.
 - **Both model answers stay cached** in `work/moments.json` and
   `work/selection.json`. They are plain, hand-editable JSON, and a re-run must
   reuse them rather than paying again.
-- **Every failure raises a subclass of `KeelYoutubeError`** with a message naming
+- **Every failure raises a subclass of `ExtractError`** with a message naming
   the fix. `MissingRequirement` in particular must always print the exact install
   command.
 - **Comments explain why, not what.** Do not narrate the code beneath them.
@@ -78,9 +78,9 @@ change belongs in the caller, not here.
 
 ```bash
 python -m venv .venv && ./.venv/bin/pip install -e .
-./.venv/bin/keel-youtube doctor
+./.venv/bin/yt-extract doctor
 ./.venv/bin/python -m unittest discover -s tests
-./.venv/bin/keel-youtube run "<url>" --out ./out
+./.venv/bin/yt-extract run "<url>" --out ./out
 ```
 
 Tests are offline and free — they cover parsing, grouping, timecodes, slugs and

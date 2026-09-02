@@ -19,7 +19,7 @@ from pathlib import Path
 
 from . import frames as frames_mod
 from . import prompts, subtitles, transcript
-from .errors import KeelYoutubeError, LLMError
+from .errors import ExtractError, LLMError
 from .ids import canonical_url, video_id
 from .llm import resolve as resolve_provider
 from .llm.none import NoneProvider
@@ -52,7 +52,7 @@ def run(
     """Produce the output folder for one video and return its manifest."""
     vid = video_id(url)
     if not vid:
-        raise KeelYoutubeError(f"not a recognizable YouTube URL: {url!r}")
+        raise ExtractError(f"not a recognizable YouTube URL: {url!r}")
     url = canonical_url(url)
 
     root = Path(out_dir).expanduser().resolve() / vid
@@ -99,7 +99,7 @@ def run(
         else:
             log(f"      {moment['key']}: no frames (section download failed)")
     if not candidates:
-        raise KeelYoutubeError("no frames could be captured for any moment")
+        raise ExtractError("no frames could be captured for any moment")
 
     log("[5/6] choosing the best frame per moment")
     selections = _choose_frames(engine, moments, candidates, work, log)

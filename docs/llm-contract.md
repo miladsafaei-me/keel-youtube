@@ -1,7 +1,7 @@
 # The model layer
 
 Everything this tool asks a language model, and everything it will accept back.
-Read this before changing `prompts.py` or anything under `src/keel_youtube/llm/`.
+Read this before changing `prompts.py` or anything under `src/yt_extract/llm/`.
 
 ## A model is used at exactly two points
 
@@ -57,7 +57,7 @@ A re-run reads them instead of asking again, so:
   re-prompting;
 - deleting one file re-asks exactly that one question.
 
-`keel-youtube plan <url>` stops right after `work/thin.txt` is written, so
+`yt-extract plan <url>` stops right after `work/thin.txt` is written, so
 `moments.json` can be authored by hand from the start.
 
 ## Providers
@@ -76,7 +76,7 @@ class Provider:
 | Provider | Auth | Dependencies | Notes |
 |---|---|---|---|
 | `claude-cli` | an installed, signed-in Claude Code | none | **the default** |
-| `anthropic` | `ANTHROPIC_API_KEY` | `keel-youtube[anthropic]` | official SDK |
+| `anthropic` | `ANTHROPIC_API_KEY` | `yt-extract[anthropic]` | official SDK |
 | `gemini` | `GEMINI_API_KEY` | none | plain REST |
 | `none` | — | none | `--no-llm`; deterministic, never auto-selected |
 

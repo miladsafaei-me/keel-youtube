@@ -19,7 +19,7 @@ import re
 from pathlib import Path
 
 from .binaries import ffmpeg_path, ffprobe_path, run, ytdlp_path
-from .errors import KeelYoutubeError
+from .errors import ExtractError
 
 # Video-only, capped height: frames are for reading charts and slides, and audio
 # would double the download for nothing.
@@ -82,7 +82,7 @@ def download_section(url: str, start: float, end: float, workdir: Path, name: st
     )
     hits = sorted(workdir.glob(name + ".*"))
     if not hits:
-        raise KeelYoutubeError(
+        raise ExtractError(
             f"yt-dlp downloaded no video for section {start:.0f}-{end:.0f}s: "
             f"{proc.stderr.strip()[-300:]}"
         )
@@ -146,7 +146,7 @@ def capture_moment(url: str, second: float, key: str, workdir: Path,
     sections = workdir / "sections"
     try:
         clip = download_section(url, section_start, section_end, sections, f"{key}")
-    except KeelYoutubeError:
+    except ExtractError:
         return []
 
     candidates_dir = workdir / "candidates"

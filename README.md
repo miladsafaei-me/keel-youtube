@@ -1,4 +1,4 @@
-# keel-youtube
+# yt-extract
 
 Turn a YouTube video into a folder: a formatted transcript, and the screenshots
 that actually carry the video's meaning.
@@ -17,8 +17,8 @@ database, no CMS, no publishing step, no content model.
 ## Install
 
 ```bash
-pip install git+https://github.com/miladsafaei-me/keel-youtube
-keel-youtube doctor
+pip install git+https://github.com/miladsafaei-me/yt-extract
+yt-extract doctor
 ```
 
 `yt-dlp` and `ffmpeg` come with it — both are pip-installable, so there is
@@ -27,7 +27,7 @@ nothing to set up by hand. `doctor` tells you if anything is missing anyway.
 ## Use
 
 ```bash
-keel-youtube run "https://www.youtube.com/watch?v=VIDEO_ID" --out ./out
+yt-extract run "https://www.youtube.com/watch?v=VIDEO_ID" --out ./out
 ```
 
 That is the whole interface. Useful flags:
@@ -41,7 +41,7 @@ That is the whole interface. Useful flags:
 | `--clean` | Delete `work/` when the run succeeds |
 | `--lang de` | Prefer a different caption language |
 
-`keel-youtube plan <url>` stops after the transcript, so you can write
+`yt-extract plan <url>` stops after the transcript, so you can write
 `work/moments.json` yourself and re-run to pick the moments by hand.
 
 ## How the screenshots get chosen
@@ -65,7 +65,7 @@ Auto-detected in this order, and `--provider` overrides it:
 
 1. **`claude-cli`** — an installed, signed-in [Claude Code](https://claude.com/claude-code).
    No API key, no extra install. This is the default.
-2. **`anthropic`** — `ANTHROPIC_API_KEY` plus `pip install keel-youtube[anthropic]`.
+2. **`anthropic`** — `ANTHROPIC_API_KEY` plus `pip install yt-extract[anthropic]`.
 3. **`gemini`** — `GEMINI_API_KEY`. Uses plain REST; no SDK needed.
 4. **`none`** — `--no-llm`. Never chosen automatically.
 

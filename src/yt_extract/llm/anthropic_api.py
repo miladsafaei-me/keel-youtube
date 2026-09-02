@@ -1,6 +1,6 @@
 """Anthropic through an API key, using the official SDK.
 
-Installed on demand (`pip install keel-youtube[anthropic]`) so the base package
+Installed on demand (`pip install yt-extract[anthropic]`) so the base package
 keeps no model dependency at all.
 """
 
@@ -18,7 +18,7 @@ _MEDIA_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png"
 
 class AnthropicProvider(Provider):
     name = "anthropic"
-    setup_hint = "export ANTHROPIC_API_KEY=... and run: pip install keel-youtube[anthropic]"
+    setup_hint = "export ANTHROPIC_API_KEY=... and run: pip install yt-extract[anthropic]"
 
     @property
     def default_model(self) -> str:

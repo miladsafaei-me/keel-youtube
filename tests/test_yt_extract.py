@@ -13,9 +13,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from keel_youtube import frames, ids, prompts, subtitles, transcript
-from keel_youtube.errors import LLMError
-from keel_youtube.llm.base import parse_json_object
+from yt_extract import frames, ids, prompts, subtitles, transcript
+from yt_extract.errors import LLMError
+from yt_extract.llm.base import parse_json_object
 
 
 class TestIds(unittest.TestCase):

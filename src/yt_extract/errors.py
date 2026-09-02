@@ -5,11 +5,11 @@ different about it."""
 from __future__ import annotations
 
 
-class KeelYoutubeError(RuntimeError):
-    """Base class for every error raised by keel-youtube."""
+class ExtractError(RuntimeError):
+    """Base class for every error raised by yt-extract."""
 
 
-class MissingRequirement(KeelYoutubeError):
+class MissingRequirement(ExtractError):
     """An external program (yt-dlp, ffmpeg) or credential is not available.
 
     The message always names the exact command that fixes it, because this is
@@ -17,7 +17,7 @@ class MissingRequirement(KeelYoutubeError):
     """
 
 
-class TranscriptUnavailable(KeelYoutubeError):
+class TranscriptUnavailable(ExtractError):
     """The video has no usable caption track, or yt-dlp could not read it.
 
     Audio transcription (Whisper and friends) is deliberately out of scope: it
@@ -26,6 +26,6 @@ class TranscriptUnavailable(KeelYoutubeError):
     """
 
 
-class LLMError(KeelYoutubeError):
+class LLMError(ExtractError):
     """A model provider failed, or returned something that is not the JSON the
     caller asked for."""
