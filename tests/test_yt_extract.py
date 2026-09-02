@@ -253,6 +253,21 @@ class TestFailureExplanation(unittest.TestCase):
         ):
             self.assertIn("--cookies-from-browser", binaries.explain_ytdlp_failure(stderr), stderr)
 
+    def test_expired_cookies_are_named_as_such(self):
+        """"No longer valid" means rotated, and needs a different fix from "no cookies"."""
+        explained = binaries.explain_ytdlp_failure(
+            "WARNING: The provided YouTube account cookies are no longer valid. "
+            "They have likely been rotated in the browser as a security measure."
+        )
+        self.assertIn("EXPIRED", explained)
+        self.assertIn("private window", explained)
+
+    def test_the_chrome_dead_end_is_called_out(self):
+        """Chrome on Windows cannot be read at all; suggesting it wastes an hour."""
+        explained = binaries.explain_ytdlp_failure("ERROR: Sign in to confirm you're not a bot")
+        self.assertIn("firefox", explained)
+        self.assertIn("Chrome 127", explained)
+
     def test_an_unrelated_failure_is_left_alone(self):
         explained = binaries.explain_ytdlp_failure("ERROR: unable to write to disk")
         self.assertNotIn("--cookies-from-browser", explained)

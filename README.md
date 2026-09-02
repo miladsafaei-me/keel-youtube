@@ -97,16 +97,35 @@ browser session instead:
 yt-extract run "<url>" --out ./out --cookies-from-browser firefox
 ```
 
-Any installed browser works (`firefox`, `chrome`, `edge`, `brave`, `opera`,
-`vivaldi`, `safari`, `chromium`). Firefox is the most reliable — recent Chrome
-versions encrypt their cookie store in a way that often blocks reading it.
+Try it in this order:
 
-If reading the browser directly does not work, export a `cookies.txt` with a
-browser extension while signed in to YouTube, and pass the file:
+**1. No cookies at all.** Invalid cookies are worse than none, and this tool
+supplies the JavaScript runtime YouTube requires. Try a plain run first.
+
+**2. Firefox.** Log in to YouTube in Firefox, **close Firefox completely**, then
+run with `--cookies-from-browser firefox`.
+
+**Chrome does not work for this on Windows.** Since Chrome 127 its cookies are
+encrypted with a key bound to the Chrome process, so nothing outside Chrome can
+read them — that is the `Could not copy Chrome cookie database` error, and it
+has no workaround. Use Firefox or an exported file instead.
+
+**3. An exported `cookies.txt`.** The export has to be done a specific way or
+YouTube invalidates it within minutes, because it rotates the session on every
+open YouTube tab:
+
+1. Open a **private / incognito** window and log in to YouTube.
+2. In that same window, go to `https://www.youtube.com/robots.txt`.
+3. Export `youtube.com` cookies with a cookies.txt browser extension.
+4. **Close the private window** without logging out.
 
 ```bash
 yt-extract run "<url>" --out ./out --cookies /path/to/cookies.txt
 ```
+
+If a cookie file that used to work stops working, this is why — the message is
+`The provided YouTube account cookies are no longer valid`. Re-export it the
+same way.
 
 To set it once instead of on every command, use an environment variable:
 `YT_EXTRACT_COOKIES_FROM_BROWSER=firefox` or `YT_EXTRACT_COOKIES=/path/to/cookies.txt`.

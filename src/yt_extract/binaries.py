@@ -224,22 +224,57 @@ _AUTH_SIGNATURES = (
     "the page needs to be reloaded",
     "challenge solving failed",
     "confirm your age",
+    "no supported javascript runtime",
 )
 
+# YouTube rotates the session on any open YouTube tab, which silently invalidates
+# a cookies.txt exported earlier from that same browser. This is the single most
+# common way a cookie setup that "worked yesterday" stops working, and the fix is
+# not obvious from the message.
+_ROTATED_SIGNATURE = "no longer valid"
+
 COOKIE_HELP = (
-    "YouTube refused an anonymous request. Give it your browser session:\n"
-    "  easiest:  --cookies-from-browser firefox     (or chrome / edge / brave / safari)\n"
-    "  or:       --cookies C:\\path\\to\\cookies.txt   (exported with a cookies.txt extension)\n"
-    "  set once: YT_EXTRACT_COOKIES_FROM_BROWSER=firefox\n"
-    "Then check the JavaScript runtime is present with:  yt-extract doctor"
+    "YouTube refused this request. Fixes, in the order worth trying:\n"
+    "\n"
+    "  1. Try again with NO cookies at all. Invalid cookies are worse than none,\n"
+    "     and this tool now supplies the JavaScript runtime YouTube requires.\n"
+    "\n"
+    "  2. Use Firefox:  --cookies-from-browser firefox\n"
+    "     Log in to YouTube in Firefox, CLOSE Firefox completely, then run this.\n"
+    "     Chrome does not work for this on Windows: since Chrome 127 its cookies\n"
+    "     are encrypted with a key bound to the Chrome process, so they cannot be\n"
+    "     read at all - that is the 'Could not copy Chrome cookie database' error,\n"
+    "     and it has no workaround.\n"
+    "\n"
+    "  3. Export a cookies.txt the way that survives:  --cookies <file>\n"
+    "     a. open a PRIVATE / incognito window and log in to YouTube\n"
+    "     b. in that same window go to  https://www.youtube.com/robots.txt\n"
+    "     c. export youtube.com cookies with a cookies.txt extension\n"
+    "     d. CLOSE the private window without logging out\n"
+    "     Exporting from a normal window gives a file YouTube invalidates within\n"
+    "     minutes, because it rotates the session on every open YouTube tab.\n"
+    "\n"
+    "  4. Update yt-dlp:  pip install -U yt-dlp\n"
+    "\n"
+    "Run `yt-extract doctor` to confirm the runtime and solver scripts are present."
+)
+
+ROTATED_HELP = (
+    "The cookies you supplied have EXPIRED - YouTube rotated that session.\n"
+    "This happens whenever the cookies were exported from a browser that then\n"
+    "kept a YouTube tab open. Re-export them from a private window (step 3 below),\n"
+    "or drop the cookie flag entirely and try without."
 )
 
 
 def explain_ytdlp_failure(stderr: str) -> str:
     """Append the actual fix when yt-dlp's failure is an authentication one."""
     text = stderr or ""
+    lowered = text.lower()
     tail = text.strip()[-400:]
-    if any(sig in text.lower() for sig in _AUTH_SIGNATURES):
+    if _ROTATED_SIGNATURE in lowered and "cookies" in lowered:
+        return f"{tail}\n\n{ROTATED_HELP}\n\n{COOKIE_HELP}"
+    if any(sig in lowered for sig in _AUTH_SIGNATURES):
         return f"{tail}\n\n{COOKIE_HELP}"
     return tail
 
