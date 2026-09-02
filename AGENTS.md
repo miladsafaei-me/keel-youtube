@@ -55,6 +55,10 @@ change belongs in the caller, not here.
 
 ## Rules
 
+- **This repo stays self-contained.** Its dependencies are public PyPI packages and
+  nothing else: never add a private, internal or git-URL dependency, never import
+  from another of the author's projects, and never copy code in from one. It is
+  shared with people who have access to nothing else, and that must stay true.
 - **Network access lives in exactly two places:** `binaries.py` (which runs
   `yt-dlp`) and `llm/`. Nothing else may open a socket or shell out.
 - **No secret ever appears in code, tests or committed files.** Keys are read from
