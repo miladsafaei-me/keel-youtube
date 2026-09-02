@@ -9,7 +9,7 @@ description = "Turn a YouTube video into a folder: a formatted transcript plus t
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Milad Safaei", email = "miladsafaei.me@gmail.com" }]
-license = { text = "UNLICENSED" }
+license = { text = "MIT" }
 keywords = ["youtube", "transcript", "screenshots", "ffmpeg", "yt-dlp"]
 
 # The two external programs this tool drives are both installable by pip, so a

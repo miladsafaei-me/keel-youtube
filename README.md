@@ -78,3 +78,8 @@ scope.
 
 Read [AGENTS.md](AGENTS.md) first. The model layer is specified in
 [docs/llm-contract.md](docs/llm-contract.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE). Use it, change it, ship it; just keep the copyright
+notice.
