@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "keel-youtube"
+version = "0.1.0"
+description = "Turn a YouTube video into a folder: a formatted transcript plus the screenshots that matter."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Milad Safaei", email = "miladsafaei.me@gmail.com" }]
+license = { text = "UNLICENSED" }
+keywords = ["youtube", "transcript", "screenshots", "ffmpeg", "yt-dlp"]
+
+# The two external programs this tool drives are both installable by pip, so a
+# plain `pip install keel-youtube` leaves nothing for the user to set up:
+#   yt-dlp         - a pure-Python package; also the thing that breaks when
+#                    YouTube changes, so it is deliberately NOT pinned tight.
+#   imageio-ffmpeg - ships a prebuilt ffmpeg binary per platform. A system
+#                    ffmpeg on PATH is preferred at runtime when present.
+# No LLM SDK is required: the default provider shells out to an already
+# installed Claude Code CLI, and the Gemini provider speaks plain REST.
+dependencies = [
+    "yt-dlp>=2025.1",
+    "imageio-ffmpeg>=0.5",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40"]
+
+[project.scripts]
+keel-youtube = "keel_youtube.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/miladsafaei-me/keel-youtube"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/keel_youtube"]
