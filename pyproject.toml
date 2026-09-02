@@ -12,17 +12,28 @@ authors = [{ name = "Milad Safaei", email = "miladsafaei.me@gmail.com" }]
 license = { text = "MIT" }
 keywords = ["youtube", "transcript", "screenshots", "ffmpeg", "yt-dlp"]
 
-# The two external programs this tool drives are both installable by pip, so a
-# plain `pip install yt-extract` leaves nothing for the user to set up:
-#   yt-dlp         - a pure-Python package; also the thing that breaks when
-#                    YouTube changes, so it is deliberately NOT pinned tight.
-#   imageio-ffmpeg - ships a prebuilt ffmpeg binary per platform. A system
-#                    ffmpeg on PATH is preferred at runtime when present.
+# Every external program this tool drives is installable by pip, so a plain
+# `pip install yt-extract` leaves nothing for the user to set up by hand:
+#   yt-dlp                - reads YouTube; also the piece that breaks when
+#                           YouTube changes, so deliberately NOT pinned tight.
+#   imageio-ffmpeg        - a prebuilt ffmpeg per platform. A system ffmpeg on
+#                           PATH is preferred at runtime when present.
+#   yt-dlp-ejs            - yt-dlp's JS challenge-solver scripts.
+#   nodejs-wheel-binaries - a JavaScript runtime to execute them.
 # No LLM SDK is required: the default provider shells out to an already
 # installed Claude Code CLI, and the Gemini provider speaks plain REST.
 dependencies = [
     "yt-dlp>=2025.1",
     "imageio-ffmpeg>=0.5",
+    # YouTube hands out a JavaScript "n challenge" that has to be executed before
+    # it will serve formats, and increasingly before it will serve metadata at
+    # all. yt-dlp needs BOTH halves to solve it: a runtime and the scripts.
+    # Without them, extraction fails with "n challenge solving failed" or
+    # "The page needs to be reloaded", which reads like a network problem and is
+    # not one. The node wheel is ~40-60 MB - the largest thing here, and worth it
+    # to keep a fresh install working with nothing to set up by hand.
+    "yt-dlp-ejs>=0.8",
+    "nodejs-wheel-binaries>=22",
 ]
 
 [project.optional-dependencies]

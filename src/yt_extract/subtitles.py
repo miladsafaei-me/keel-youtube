@@ -15,7 +15,7 @@ import json
 import re
 from pathlib import Path
 
-from .binaries import run, ytdlp_path
+from .binaries import explain_ytdlp_failure, run, ytdlp_command
 from .errors import TranscriptUnavailable
 
 _WS_RE = re.compile(r"\s+")
@@ -41,10 +41,10 @@ class Segment:
 def fetch_metadata(url: str, *, timeout: int = 180) -> dict:
     """Title, channel, duration and upload date, in one yt-dlp call."""
     fields = "%(id)s\t%(title)s\t%(channel)s\t%(duration)s\t%(upload_date)s"
-    proc = run([ytdlp_path(), "--skip-download", "--print", fields, url], timeout=timeout)
+    proc = run(ytdlp_command("--skip-download", "--print", fields, url), timeout=timeout)
     if proc.returncode != 0:
         raise TranscriptUnavailable(
-            f"yt-dlp could not read metadata for {url!r}: {proc.stderr.strip()[-300:]}"
+            f"yt-dlp could not read metadata for {url!r}:\n{explain_ytdlp_failure(proc.stderr)}"
         )
     parts = (proc.stdout.strip().split("\t") + [""] * 5)[:5]
     vid, title, channel, duration, upload_date = parts
@@ -72,13 +72,13 @@ def download_captions(url: str, workdir: Path, *, lang: str = "en", timeout: int
     for sub_flag in ("--write-subs", "--write-auto-subs"):
         for fmt in ("json3", "vtt"):
             run(
-                [
-                    ytdlp_path(), "--skip-download", sub_flag,
+                ytdlp_command(
+                    "--skip-download", sub_flag,
                     "--sub-langs", f"{lang},{lang}-orig,{lang}.*",
                     "--sub-format", fmt,
                     "-o", base + ".%(ext)s",
                     url,
-                ],
+                ),
                 timeout=timeout,
             )
             hits = sorted(

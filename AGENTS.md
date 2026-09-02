@@ -31,7 +31,7 @@ change belongs in the caller, not here.
 | File | Holds |
 |---|---|
 | `ids.py` | the only place that knows what a YouTube URL looks like |
-| `binaries.py` | finding and running `yt-dlp` / `ffmpeg`; the only `subprocess` helper |
+| `binaries.py` | finding `yt-dlp` / `ffmpeg` / `node`, building every yt-dlp command line, the only `subprocess` helper |
 | `subtitles.py` | caption download and parsing into timestamped segments |
 | `transcript.py` | segments → `transcript.md` and the thin index; no I/O beyond writing |
 | `frames.py` | section download, frame bursts, the detail score, slugs |
@@ -61,6 +61,13 @@ change belongs in the caller, not here.
   shared with people who have access to nothing else, and that must stay true.
 - **Network access lives in exactly two places:** `binaries.py` (which runs
   `yt-dlp`) and `llm/`. Nothing else may open a socket or shell out.
+- **Every yt-dlp call goes through `ytdlp_command()`.** Metadata, captions and
+  frame capture are three separate invocations; a cookie or runtime fix applied
+  to only one of them looks like a flaky tool. Never build a yt-dlp argument
+  list anywhere else.
+- **A failure message names its fix.** When yt-dlp fails because YouTube refused
+  the request, say so and give the flag that solves it — the raw stderr does not
+  make that actionable.
 - **No secret ever appears in code, tests or committed files.** Keys are read from
   the environment inside a provider and nowhere else.
 - **Never take one frame per moment.** The burst-then-choose pass is the reason

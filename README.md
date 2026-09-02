@@ -21,8 +21,25 @@ pip install git+https://github.com/miladsafaei-me/yt-extract
 yt-extract doctor
 ```
 
-`yt-dlp` and `ffmpeg` come with it — both are pip-installable, so there is
-nothing to set up by hand. `doctor` tells you if anything is missing anyway.
+Everything it needs comes with it — `yt-dlp`, `ffmpeg`, a JavaScript runtime and
+YouTube's challenge-solver scripts are all pip-installable, so there is nothing
+to set up by hand. `doctor` reports anything missing, and `doctor --fix`
+installs it into the same environment.
+
+`ytx` is a shorter alias for every command below.
+
+### On Windows
+
+```powershell
+py -m pip install git+https://github.com/miladsafaei-me/yt-extract
+py -m yt_extract doctor
+py -m yt_extract run "https://www.youtube.com/watch?v=VIDEO_ID" --out .\out
+```
+
+Use `py -m yt_extract` rather than the `yt-extract` command: pip puts console
+scripts in a `Scripts\` folder that is usually not on PATH, and `python` is often
+not a recognised command on Windows while `py` always is. Chain commands with
+`;`, not `&` — PowerShell reserves `&`.
 
 ## Use
 
@@ -69,10 +86,43 @@ Auto-detected in this order, and `--provider` overrides it:
 3. **`gemini`** — `GEMINI_API_KEY`. Uses plain REST; no SDK needed.
 4. **`none`** — `--no-llm`. Never chosen automatically.
 
+## When YouTube refuses
+
+YouTube does not serve every request anonymously. When it refuses, extraction
+fails with `Sign in to confirm you're not a bot`, `The page needs to be
+reloaded`, or a bare "could not read metadata". Retrying does not help; give it a
+browser session instead:
+
+```bash
+yt-extract run "<url>" --out ./out --cookies-from-browser firefox
+```
+
+Any installed browser works (`firefox`, `chrome`, `edge`, `brave`, `opera`,
+`vivaldi`, `safari`, `chromium`). Firefox is the most reliable — recent Chrome
+versions encrypt their cookie store in a way that often blocks reading it.
+
+If reading the browser directly does not work, export a `cookies.txt` with a
+browser extension while signed in to YouTube, and pass the file:
+
+```bash
+yt-extract run "<url>" --out ./out --cookies /path/to/cookies.txt
+```
+
+To set it once instead of on every command, use an environment variable:
+`YT_EXTRACT_COOKIES_FROM_BROWSER=firefox` or `YT_EXTRACT_COOKIES=/path/to/cookies.txt`.
+
+Two more things worth knowing:
+
+- **`pip install -U yt-dlp` is the first fix for almost any extraction failure.**
+  YouTube changes often, and yt-dlp is the piece that tracks those changes.
+- **`--ytdlp-arg` passes anything straight through to yt-dlp**, repeatable, for
+  options this tool does not wrap: `--ytdlp-arg --extractor-args --ytdlp-arg
+  youtube:player_client=web`.
+
 ## Requirements
 
-Python 3.10+. Captions must exist on the video — audio transcription is out of
-scope.
+Python 3.10+ and nothing else installed by hand. Captions must exist on the
+video — audio transcription is out of scope.
 
 ## Working on this repo
 

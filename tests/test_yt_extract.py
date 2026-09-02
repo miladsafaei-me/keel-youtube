@@ -13,8 +13,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from yt_extract import frames, ids, prompts, subtitles, transcript
-from yt_extract.errors import LLMError
+from unittest import mock
+
+from yt_extract import binaries, frames, ids, prompts, subtitles, transcript
+from yt_extract.errors import LLMError, MissingRequirement
 from yt_extract.llm.base import parse_json_object
 
 
@@ -180,3 +182,78 @@ class TestJsonReader(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestYtdlpCommand(unittest.TestCase):
+    """How this package talks to YouTube.
+
+    Every yt-dlp call in the package goes through one builder, because metadata,
+    captions and frame capture are three separate invocations - a cookie fix that
+    reaches only one of them looks like a flaky tool.
+    """
+
+    def setUp(self):
+        self._node = mock.patch.object(binaries, "node_path", return_value="/bin/node")
+        self._ytdlp = mock.patch.object(binaries, "ytdlp_path", return_value="/bin/yt-dlp")
+        self._env = mock.patch.dict("os.environ", {}, clear=True)
+        for patcher in (self._node, self._ytdlp, self._env):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.addCleanup(binaries.configure)
+
+    def test_a_javascript_runtime_is_offered_by_default(self):
+        """Without one, YouTube's n challenge fails and nothing can be extracted."""
+        binaries.configure()
+        self.assertEqual(binaries.ytdlp_base_args(), ["--js-runtimes", "node:/bin/node"])
+
+    def test_the_runtime_can_be_switched_off_for_diagnosis(self):
+        binaries.configure(use_node=False)
+        self.assertEqual(binaries.ytdlp_base_args(), [])
+
+    def test_a_cookies_file_wins_over_a_browser(self):
+        with tempfile.NamedTemporaryFile(suffix=".txt") as fh:
+            binaries.configure(cookies_file=fh.name, cookies_from_browser="firefox")
+            args = binaries.ytdlp_base_args()
+        self.assertIn("--cookies", args)
+        self.assertNotIn("--cookies-from-browser", args)
+
+    def test_a_browser_is_used_when_no_file_is_given(self):
+        binaries.configure(cookies_from_browser="firefox")
+        self.assertIn("--cookies-from-browser", binaries.ytdlp_base_args())
+
+    def test_a_missing_cookies_file_is_refused_with_the_fix(self):
+        """yt-dlp reports this as a raw traceback; the useful line must not be buried."""
+        with self.assertRaises(MissingRequirement) as caught:
+            binaries.configure(cookies_file="/nope/cookies.txt")
+        self.assertIn("--cookies-from-browser", str(caught.exception))
+
+    def test_extra_arguments_pass_through(self):
+        binaries.configure(extra_args=["--extractor-args", "youtube:player_client=web"])
+        self.assertIn("youtube:player_client=web", binaries.ytdlp_base_args())
+
+    def test_the_environment_configures_a_machine_once(self):
+        with mock.patch.dict("os.environ", {"YT_EXTRACT_COOKIES_FROM_BROWSER": "chrome"}):
+            binaries.configure()
+        self.assertIn("chrome", binaries.ytdlp_base_args())
+
+    def test_shared_flags_come_before_the_call_specific_ones(self):
+        binaries.configure()
+        self.assertEqual(
+            binaries.ytdlp_command("--print", "%(id)s", "URL"),
+            ["/bin/yt-dlp", "--js-runtimes", "node:/bin/node", "--print", "%(id)s", "URL"],
+        )
+
+
+class TestFailureExplanation(unittest.TestCase):
+    def test_an_authentication_failure_gains_the_actual_fix(self):
+        for stderr in (
+            "ERROR: Sign in to confirm you're not a bot",
+            "ERROR: The page needs to be reloaded",
+            "WARNING: n challenge solving failed",
+        ):
+            self.assertIn("--cookies-from-browser", binaries.explain_ytdlp_failure(stderr), stderr)
+
+    def test_an_unrelated_failure_is_left_alone(self):
+        explained = binaries.explain_ytdlp_failure("ERROR: unable to write to disk")
+        self.assertNotIn("--cookies-from-browser", explained)
+        self.assertIn("unable to write to disk", explained)

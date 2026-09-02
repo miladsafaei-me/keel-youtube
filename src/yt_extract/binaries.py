@@ -1,9 +1,23 @@
-"""Finding and running the two external programs this tool drives.
+"""Finding and running the external programs this tool drives.
 
-Both are pip-installable, so the normal case needs no manual setup at all. Each
-resolver still checks a system install first: a distribution's own ffmpeg is
-usually newer and better optimized than the bundled one, and a user who set
-YT_EXTRACT_FFMPEG meant it.
+Three of them, all pip-installable so a normal install needs no manual setup:
+
+- **yt-dlp** — reads YouTube. It is also the piece that breaks when YouTube
+  changes, so it is not pinned tight; `pip install -U yt-dlp` is the first fix
+  for almost any extraction failure.
+- **ffmpeg** — cuts frames out of video.
+- **node** — YouTube now hands out a JavaScript "n challenge" that must be
+  executed before it will serve formats, and increasingly before it will serve
+  metadata at all. yt-dlp solves it with a JS runtime plus the `yt-dlp-ejs`
+  script distribution; without one, extraction fails with messages like
+  "n challenge solving failed" or "The page needs to be reloaded".
+
+Each resolver prefers an explicit override, then a system install (usually newer
+and better optimised), then the bundled copy.
+
+This module is also the single place that builds a yt-dlp command line, so a
+cookie or runtime setting applies to every call the package makes rather than
+only to the one that happened to be edited.
 """
 
 from __future__ import annotations
@@ -12,11 +26,12 @@ import os
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass, field
 from functools import lru_cache
+from pathlib import Path
 
 from .errors import MissingRequirement
 
-# Per-OS install lines, used only to build a helpful error message.
 _FFMPEG_HINT = {
     "linux": "sudo dnf install ffmpeg   (Fedora/RHEL)   |   sudo apt install ffmpeg   (Debian/Ubuntu)",
     "darwin": "brew install ffmpeg",
@@ -28,13 +43,59 @@ def _platform_hint() -> str:
     return _FFMPEG_HINT.get(sys.platform, _FFMPEG_HINT["linux"])
 
 
+@dataclass
+class YtdlpSettings:
+    """How this run should talk to YouTube.
+
+    Set once by the CLI and read by every yt-dlp call. Cookies matter because
+    YouTube increasingly refuses anonymous requests - the failure reads as
+    "Sign in to confirm you're not a bot", "The page needs to be reloaded", or a
+    bare "could not read metadata", and no amount of retrying fixes it.
+    """
+
+    cookies_file: str = ""
+    cookies_from_browser: str = ""
+    extra_args: list[str] = field(default_factory=list)
+    use_node: bool = True
+
+
+_settings = YtdlpSettings()
+
+
+def configure(*, cookies_file: str = "", cookies_from_browser: str = "",
+              extra_args: list[str] | None = None, use_node: bool = True) -> None:
+    """Set the yt-dlp options for this process.
+
+    Anything not passed falls back to an environment variable, so a machine can
+    be configured once instead of on every command.
+    """
+    global _settings
+    cookies = cookies_file or os.environ.get("YT_EXTRACT_COOKIES", "")
+    if cookies and not os.path.isfile(cookies):
+        # Caught here rather than left to yt-dlp, which reports a missing cookie
+        # file as a raw Python traceback that buries the one useful line.
+        raise MissingRequirement(
+            f"the cookies file {cookies!r} does not exist.\n"
+            "  Export one with a 'cookies.txt' browser extension while signed in to YouTube,\n"
+            "  or skip the file entirely and use:  --cookies-from-browser firefox"
+        )
+    _settings = YtdlpSettings(
+        cookies_file=cookies,
+        cookies_from_browser=(
+            cookies_from_browser or os.environ.get("YT_EXTRACT_COOKIES_FROM_BROWSER", "")
+        ),
+        extra_args=list(extra_args or []) or os.environ.get("YT_EXTRACT_YTDLP_ARGS", "").split(),
+        use_node=use_node,
+    )
+
+
+def settings() -> YtdlpSettings:
+    return _settings
+
+
 @lru_cache(maxsize=1)
 def ffmpeg_path() -> str:
-    """Absolute path to an ffmpeg binary.
-
-    Order: an explicit YT_EXTRACT_FFMPEG override, then a system ffmpeg on
-    PATH, then the copy bundled by the imageio-ffmpeg dependency.
-    """
+    """Absolute path to an ffmpeg binary."""
     override = (os.environ.get("YT_EXTRACT_FFMPEG") or "").strip()
     if override:
         if not os.path.isfile(override):
@@ -60,38 +121,131 @@ def ffmpeg_path() -> str:
 
 @lru_cache(maxsize=1)
 def ffprobe_path() -> str | None:
-    """A system ffprobe if there is one, else None.
-
-    imageio-ffmpeg bundles ffmpeg without ffprobe, so this is genuinely optional
-    and every caller must cope with None.
-    """
+    """A system ffprobe if there is one, else None (the bundled ffmpeg has none)."""
     return shutil.which("ffprobe")
+
+
+def _beside_interpreter(*names: str) -> str | None:
+    """A console script installed next to this interpreter.
+
+    On Windows these land in `...\\Scripts\\`, which is frequently not on PATH -
+    the single most common reason a freshly pip-installed tool "does not exist".
+    """
+    for name in names:
+        for folder in (Path(sys.executable).parent, Path(sys.executable).parent / "Scripts"):
+            candidate = folder / name
+            if candidate.is_file():
+                return str(candidate)
+    return None
 
 
 @lru_cache(maxsize=1)
 def ytdlp_path() -> str:
-    """Absolute path to the yt-dlp executable.
-
-    yt-dlp is a declared dependency, so it lands in the same environment as this
-    package; the PATH lookup is only a fallback for odd installs.
-    """
-    found = shutil.which("yt-dlp")
+    """Absolute path to the yt-dlp executable."""
+    found = shutil.which("yt-dlp") or _beside_interpreter("yt-dlp.exe", "yt-dlp")
     if found:
         return found
-    candidate = os.path.join(os.path.dirname(sys.executable), "yt-dlp")
-    if os.path.isfile(candidate):
-        return candidate
-    raise MissingRequirement(
-        "yt-dlp was not found. Install it with:  pip install -U yt-dlp"
-    )
+    raise MissingRequirement("yt-dlp was not found. Install it with:  pip install -U yt-dlp")
+
+
+@lru_cache(maxsize=1)
+def node_path() -> str | None:
+    """A JavaScript runtime for yt-dlp's challenge solver, or None."""
+    override = (os.environ.get("YT_EXTRACT_NODE") or "").strip()
+    if override:
+        return override if os.path.isfile(override) else None
+
+    found = shutil.which("node")
+    if found:
+        return found
+
+    try:
+        import nodejs_wheel.executable as bundled
+    except ImportError:
+        return None
+    root = Path(bundled.ROOT_DIR)
+    for candidate in (root / "bin" / "node", root / "node.exe", root / "node"):
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+@lru_cache(maxsize=1)
+def has_ejs() -> bool:
+    """Whether yt-dlp's challenge-solver script distribution is installed."""
+    try:
+        import yt_dlp_ejs  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+def ytdlp_base_args() -> list[str]:
+    """The yt-dlp flags every call in this package shares.
+
+    Built here rather than inline at each call site, because metadata, captions
+    and frame capture are three separate yt-dlp invocations: a cookie fix applied
+    to only one of them looks like a flaky tool.
+    """
+    args: list[str] = []
+    current = settings()
+
+    if current.use_node:
+        node = node_path()
+        if node:
+            # Naming the path explicitly rather than just "node" - a node that
+            # came from a pip wheel is not on PATH.
+            args += ["--js-runtimes", f"node:{node}"]
+
+    if current.cookies_file:
+        args += ["--cookies", current.cookies_file]
+    elif current.cookies_from_browser:
+        args += ["--cookies-from-browser", current.cookies_from_browser]
+
+    args += current.extra_args
+    return args
+
+
+def ytdlp_command(*args: str) -> list[str]:
+    """A full yt-dlp command line: the binary, the shared flags, then `args`."""
+    return [ytdlp_path(), *ytdlp_base_args(), *args]
+
+
+# Signatures in yt-dlp's stderr meaning "YouTube refused you", not "this video is
+# broken". They need a completely different fix from every other failure, and the
+# raw message does not make that obvious enough to act on.
+_AUTH_SIGNATURES = (
+    "sign in to confirm",
+    "--cookies",
+    "cookies-from-browser",
+    "not a bot",
+    "age-restricted",
+    "login required",
+    "the page needs to be reloaded",
+    "challenge solving failed",
+    "confirm your age",
+)
+
+COOKIE_HELP = (
+    "YouTube refused an anonymous request. Give it your browser session:\n"
+    "  easiest:  --cookies-from-browser firefox     (or chrome / edge / brave / safari)\n"
+    "  or:       --cookies C:\\path\\to\\cookies.txt   (exported with a cookies.txt extension)\n"
+    "  set once: YT_EXTRACT_COOKIES_FROM_BROWSER=firefox\n"
+    "Then check the JavaScript runtime is present with:  yt-extract doctor"
+)
+
+
+def explain_ytdlp_failure(stderr: str) -> str:
+    """Append the actual fix when yt-dlp's failure is an authentication one."""
+    text = stderr or ""
+    tail = text.strip()[-400:]
+    if any(sig in text.lower() for sig in _AUTH_SIGNATURES):
+        return f"{tail}\n\n{COOKIE_HELP}"
+    return tail
 
 
 def run(cmd: list[str], *, timeout: int = 900, check: bool = False) -> subprocess.CompletedProcess:
-    """Run a command, capturing both streams as text.
-
-    `check=True` converts a non-zero exit into a MissingRequirement carrying the
-    tail of stderr, which is what actually tells the user what went wrong.
-    """
+    """Run a command, capturing both streams as text."""
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if check and proc.returncode != 0:
         raise MissingRequirement(

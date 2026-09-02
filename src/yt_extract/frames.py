@@ -18,7 +18,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .binaries import ffmpeg_path, ffprobe_path, run, ytdlp_path
+from .binaries import (explain_ytdlp_failure, ffmpeg_path, ffprobe_path, run,
+                       ytdlp_command)
 from .errors import ExtractError
 
 # Video-only, capped height: frames are for reading charts and slides, and audio
@@ -68,23 +69,22 @@ def download_section(url: str, start: float, end: float, workdir: Path, name: st
     """
     workdir.mkdir(parents=True, exist_ok=True)
     start = max(0.0, start)
-    target = workdir / name
     proc = run(
-        [
-            ytdlp_path(), "--quiet", "--no-warnings",
+        ytdlp_command(
+            "--quiet", "--no-warnings",
             "--download-sections", f"*{start:.2f}-{end:.2f}",
             "--force-keyframes-at-cuts",
             "-f", _FORMAT,
             "-o", str(workdir / (name + ".%(ext)s")),
             url,
-        ],
+        ),
         timeout=timeout,
     )
     hits = sorted(workdir.glob(name + ".*"))
     if not hits:
         raise ExtractError(
-            f"yt-dlp downloaded no video for section {start:.0f}-{end:.0f}s: "
-            f"{proc.stderr.strip()[-300:]}"
+            f"yt-dlp downloaded no video for section {start:.0f}-{end:.0f}s:\n"
+            f"{explain_ytdlp_failure(proc.stderr)}"
         )
     return hits[0]
 
